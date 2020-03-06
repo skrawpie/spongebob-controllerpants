@@ -34,7 +34,6 @@ bool FIRE_BOOL_LAST      =  HIGH;
 
 const int BUTTON_LIST_SIZE = 16;
 uint8_t BUTTON_LIST[BUTTON_LIST_SIZE] = {BUTTON_A, BUTTON_B, BUTTON_Y, BUTTON_RB, TRIGGER_RIGHT, BUTTON_R3, BUTTON_L3, DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT, BUTTON_BACK, BUTTON_START, TRIGGER_LEFT, BUTTON_LB, BUTTON_X};
-//bool BUTTON_BOOL_LIST[BUTTON_LIST_SIZE] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false};
 
 bool CONFIG_MODE = false;
 bool CONFIG_MODE_LAST = false;
@@ -66,6 +65,8 @@ bool SEQUENCE_OF_BUTTONS[BUTTON_LIST_SIZE][SEQUENCE_MAX] = {
   {false, false, false, false, false},
 };
 
+int TIME_HELD = 0;
+
 void setup() {
   // put your setup code here, to run once:
   pinMode(LED_PIN,    OUTPUT);
@@ -79,6 +80,19 @@ void setup() {
 
   XInput.begin();
   //Serial.begin(9600);
+}
+
+void reset() {
+  SEQUENCE_POS = 0;
+  SEQUENCE_SIZE = 0;                // Current size of the sequnce
+  SEQUENCE_BEHAVIOR = REPEAT_AFTER_LAST; // it doesn't actually reset to this value idk why but hey it works
+  TIME_HELD = 0;
+
+  for (int i = 0; i < BUTTON_LIST_SIZE; i++) {
+    for (int j = 0; j < SEQUENCE_MAX; j++) {
+      SEQUENCE_OF_BUTTONS[i][j] = false;
+    }
+  }
 }
 
 void loop() {
@@ -149,34 +163,62 @@ void loop() {
     // use FIRE to toggle buttons in the appropriate sequence...
     if (FIRE_BOOL && !FIRE_BOOL_LAST) {
       SEQUENCE_OF_BUTTONS[BUTTON_LIST_POS][SEQUENCE_POS] = !SEQUENCE_OF_BUTTONS[BUTTON_LIST_POS][SEQUENCE_POS];
-
-      // Debug array on exit
-      /*
-      if (CONFIG_MODE_LAST) {
-        for (int i = 0; i < BUTTON_LIST_SIZE; i++) {
-          for (int j = 0; j < SEQUENCE_MAX; j++) {
-            if (SEQUENCE_OF_BUTTONS[i][j]) {
-              Serial.print("TRUE ");
-            } else {
-              Serial.print("FALSE");
-            }
-            Serial.print(" ");
-          }
-          Serial.println();
-        }
-      }
-      */
     }
 
     // Send button press to the computer so the player
     // knows what button was activated.
     XInput.setButton(BUTTON_LIST[BUTTON_LIST_POS], FIRE_BOOL);
-    XInput.send();
+    XInput.send();  // other send is called not in config mode so we repeat it here to avoid issues
 
     // Press reset to change sequence behavior 
     // hold reset to reset everything.
-    // TODO
-    
+    // Incrememnt time while the button is held
+    if (RESET_BOOL) {
+      TIME_HELD++;
+    }
+
+    // If it wasn't held long enough
+    // swap the sequence behavior
+    if (RESET_BOOL != RESET_BOOL_LAST) {
+      if (!RESET_BOOL) {
+        if (TIME_HELD < 500) {
+          switch (SEQUENCE_BEHAVIOR) {
+            case LOOP_AFTER_LAST:
+              SEQUENCE_BEHAVIOR = REPEAT_AFTER_LAST;
+              break;
+            case REPEAT_AFTER_LAST:
+              SEQUENCE_BEHAVIOR = LOOP_AFTER_LAST;
+              break;
+          }
+          TIME_HELD = 0;
+        }
+      }
+    }
+
+    // If it was held long enough
+    // blink the LED five times and reset pertinent values
+    if (TIME_HELD >= 500) {
+      digitalWrite(LED_PIN, LOW);
+      delay(100);
+      digitalWrite(LED_PIN, HIGH);
+      delay(100);
+      digitalWrite(LED_PIN, LOW);
+      delay(100);
+      digitalWrite(LED_PIN, HIGH);
+      delay(100);
+      digitalWrite(LED_PIN, LOW);
+      delay(100);
+      digitalWrite(LED_PIN, HIGH);
+      delay(100);
+      digitalWrite(LED_PIN, LOW);
+      delay(100);
+      digitalWrite(LED_PIN, HIGH);
+      delay(100);
+      digitalWrite(LED_PIN, LOW);
+      delay(100);
+      digitalWrite(LED_PIN, HIGH);
+      reset();
+    }
   } else {
     // If configuration mode is set to false...
     // set XInput values...
