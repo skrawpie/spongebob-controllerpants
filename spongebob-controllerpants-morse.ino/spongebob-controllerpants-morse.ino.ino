@@ -137,9 +137,11 @@ void loop() {
   if (digitalRead(SWITCH_PIN) == LOW) {
     digitalWrite(LED_PIN, LOW);
     XInput.setJoystick(JOY_LEFT, !digitalRead(UP_PIN), !digitalRead(DOWN_PIN), !digitalRead(LEFT_PIN), !digitalRead(RIGHT_PIN));
+    XInput.setJoystick(JOY_RIGHT, false, false, false, false);
   } else {
     digitalWrite(LED_PIN, HIGH);
     XInput.setJoystick(JOY_RIGHT, !digitalRead(UP_PIN), !digitalRead(DOWN_PIN), !digitalRead(LEFT_PIN), !digitalRead(RIGHT_PIN));
+    XInput.setJoystick(JOY_LEFT, false, false, false, false);
   }
   
   // Hold/release buttons long enough so they register
