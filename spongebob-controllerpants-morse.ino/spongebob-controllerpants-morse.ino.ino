@@ -15,12 +15,14 @@ const int BUTTON_PIN        =  7;
 
 DebouncedInput BUTTON(BUTTON_PIN);
 
+
 // Assign DOT and DASH numbers so arrays are way simpler.
 const int DOT = 1;
 const int DASH = 2;
 
 unsigned long DASH_LENGTH = 125; // Value in milliseconds. DOT_LENGTH would be any value < 125.
-unsigned long RUN_TIME = 250;    // Value in milliseconds. Time after release until press is read and run.
+unsigned long RUN_TIME = 150;    // Value in milliseconds. Time after release until press is read and run.
+unsigned long HOLD_TIME = 125;
 
 int MORSE[100];
 int MORSE_POS = 0;
@@ -50,8 +52,10 @@ int CODE[CODE_MAX][CODE_LENGTH] = {
 // Button variables
 bool BUTTON_PRESSED, BUTTON_PRESSED_LAST;
 unsigned long TIME, PRESS_TIME, RELEASE_TIME;
-int DELAY_TIMES[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int DELAY_MAX = 2500;
+unsigned long DELAY_TIMES[CODE_MAX+1];
+
+// Reset
+bool RESET_BUTTON, RESET_BUTTON_LAST;
 
 // Booleans for stick.
 bool LEFT_UP = false;
@@ -81,6 +85,7 @@ void setup() {
 }
 
 void loop() {
+  RESET_BUTTON = digitalRead(RESET_PIN);
   TIME = millis();
   
   // Assign variables
@@ -116,72 +121,7 @@ void loop() {
     Serial.println(MORSE_MAX);
 
     // Compare MORSE to CODE to sort out what needs to be done.
-    switch (FIND_BUTTON()) {
-      case 1:
-        XInput.setButton(BUTTON_A, true);
-        Serial.println("A");
-        break;
-      case 2:
-        XInput.setButton(BUTTON_B, true);
-        Serial.println("B");
-        break;
-      case 3:
-        XInput.setButton(BUTTON_X, true);
-        Serial.println("X");
-        break;
-      case 4:
-        XInput.setButton(BUTTON_Y, true);
-        Serial.println("Y");
-        break;
-      case 5:
-        XInput.setButton(BUTTON_LB, true);
-        Serial.println("LB");
-        break;
-      case 6:
-        XInput.setButton(BUTTON_RB, true);
-        Serial.println("RB");
-        break;
-      case 7:
-        XInput.setButton(TRIGGER_LEFT, true);
-        Serial.println("LEFT TRIGGER");
-        break;
-      case 8:
-        XInput.setButton(TRIGGER_RIGHT, true);
-        Serial.println("RIGHT TRIGGER");
-        break;
-      case 9:
-        XInput.setButton(BUTTON_START, true);
-        Serial.println("START");
-        break;
-      case 10:
-        XInput.setButton(BUTTON_BACK, true);
-        Serial.println("BACK");
-        break;
-      case 11:
-        XInput.setButton(BUTTON_L3, true);
-        Serial.println("L3");
-        break;
-      case 12:
-        XInput.setButton(BUTTON_R3, true);
-        Serial.println("R3");
-        break;
-      case 13:
-        POV_UP = true;
-        Serial.println("DPAD UP");
-        break;
-      case 14:
-        POV_DOWN = true;
-        Serial.println("DPAD DOWN");
-        break;
-      case 15:
-        POV_LEFT = true;
-        Serial.println("DPAD LEFT");
-        break;
-      case 16:
-        POV_RIGHT = true;
-        Serial.println("DPAD RIGHT");
-        break;
-    }
+    HOLD_BUTTON_START(FIND_BUTTON_POS(FIND_BUTTON()), FIND_BUTTON());
     
     // Reset array.
     memset(MORSE, 0, sizeof(MORSE));
@@ -202,123 +142,17 @@ void loop() {
     XInput.setJoystick(JOY_RIGHT, !digitalRead(UP_PIN), !digitalRead(DOWN_PIN), !digitalRead(LEFT_PIN), !digitalRead(RIGHT_PIN));
   }
   
-  // Reset buttons after delay unless reset is held
-  if (digitalRead(RESET_PIN)) {
-    if (XInput.getButton(BUTTON_A)) {
-      DELAY_TIMES[0]++;
-      if (DELAY_TIMES[0] >= DELAY_MAX) {
-        DELAY_TIMES[0] = 0;
-        XInput.setButton(BUTTON_A, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_B)) {
-      DELAY_TIMES[1]++;
-      if (DELAY_TIMES[1] >= DELAY_MAX) {
-        DELAY_TIMES[1] = 0;
-        XInput.setButton(BUTTON_B, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_X)) {
-      DELAY_TIMES[2]++;
-      if (DELAY_TIMES[2] >= DELAY_MAX) {
-        DELAY_TIMES[2] = 0;
-        XInput.setButton(BUTTON_X, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_Y)) {
-      DELAY_TIMES[3]++;
-      if (DELAY_TIMES[3] >= DELAY_MAX) {
-        DELAY_TIMES[3] = 0;
-        XInput.setButton(BUTTON_Y, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_LB)) {
-      DELAY_TIMES[4]++;
-      if (DELAY_TIMES[4] >= DELAY_MAX) {
-        DELAY_TIMES[4] = 0;
-        XInput.setButton(BUTTON_LB, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_RB)) {
-      DELAY_TIMES[5]++;
-      if (DELAY_TIMES[5] >= DELAY_MAX) {
-        DELAY_TIMES[5] = 0;
-        XInput.setButton(BUTTON_RB, false);
-      }
-    }
-    if (XInput.getTrigger(TRIGGER_LEFT) > 0) {
-      DELAY_TIMES[6]++;
-      if (DELAY_TIMES[6] >= DELAY_MAX) {
-        DELAY_TIMES[6] = 0;
-        XInput.setButton(TRIGGER_LEFT, false);
-      }
-    }
-    if (XInput.getTrigger(TRIGGER_RIGHT) > 0) {
-      DELAY_TIMES[7]++;
-      if (DELAY_TIMES[7] >= DELAY_MAX) {
-        DELAY_TIMES[7] = 0;
-        XInput.setButton(TRIGGER_RIGHT, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_START)) {
-      DELAY_TIMES[8]++;
-      if (DELAY_TIMES[8] >= DELAY_MAX) {
-        DELAY_TIMES[8] = 0;
-        XInput.setButton(BUTTON_START, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_BACK)) {
-      DELAY_TIMES[9]++;
-      if (DELAY_TIMES[9] >= DELAY_MAX) {
-        DELAY_TIMES[9] = 0;
-        XInput.setButton(BUTTON_BACK, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_L3)) {
-      DELAY_TIMES[10]++;
-      if (DELAY_TIMES[10] >= DELAY_MAX) {
-        DELAY_TIMES[10] = 0;
-        XInput.setButton(BUTTON_L3, false);
-      }
-    }
-    if (XInput.getButton(BUTTON_R3)) {
-      DELAY_TIMES[11]++;
-      if (DELAY_TIMES[11] >= DELAY_MAX) {
-        DELAY_TIMES[11] = 0;
-        XInput.setButton(BUTTON_R3, false);
-      }
-    }
-    if (POV_UP) {
-      DELAY_TIMES[12]++;
-      if (DELAY_TIMES[12] >= DELAY_MAX) {
-        DELAY_TIMES[12] = 0;
-        POV_UP = false;
-      }
-    }
-    if (POV_DOWN) {
-      DELAY_TIMES[13]++;
-      if (DELAY_TIMES[13] >= DELAY_MAX) {
-        DELAY_TIMES[13] = 0;
-        POV_DOWN = false;
-      }
-    }
-    if (POV_LEFT) {
-      DELAY_TIMES[14]++;
-      if (DELAY_TIMES[14] >= DELAY_MAX) {
-        DELAY_TIMES[14] = 0;
-        POV_LEFT = false;
-      }
-    }
-    if (POV_RIGHT) {
-      DELAY_TIMES[15]++;
-      if (DELAY_TIMES[15] >= DELAY_MAX) {
-        DELAY_TIMES[15] = 0;
-        POV_RIGHT = false;
-      }
+  // Hold/release buttons long enough so they register
+  for (uint8_t i = 1; i <= CODE_MAX; i++) {
+    HOLD_BUTTON_CHECK(i);
+  }
+
+  // Check buttons on release of RESET_BUTTON
+  if (RESET_BUTTON && RESET_BUTTON != RESET_BUTTON_LAST) {
+    for (uint8_t i = 1; i <= CODE_MAX; i++) {
+      XInput.setButton(FIND_BUTTON_POS(i), false);
     }
   }
-  
-  XInput.setDpad(POV_UP, POV_DOWN, POV_LEFT, POV_RIGHT);
   
   XInput.send();
   
@@ -328,6 +162,8 @@ void loop() {
  if (BUTTON_PRESSED) {
     RELEASE_TIME = 0;
  }
+
+ RESET_BUTTON_LAST = RESET_BUTTON;
 }
 
 int DOT_OR_DASH() {
@@ -356,6 +192,116 @@ uint8_t FIND_BUTTON() {
     }
   }
   return 0;
+}
+
+void HOLD_BUTTON_START(uint8_t v, int p) {
+  if (RESET_BUTTON == !XInput.getButton(v)) {
+    DELAY_TIMES[p] = TIME;
+  }
+  switch (p) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+      XInput.setButton(v, !XInput.getButton(v));
+      break;
+    case 7:
+    case 8:
+      if (XInput.getTrigger(v) > 0) {
+        XInput.setButton(v, false);
+      } else {
+        XInput.setButton(v, true);
+      }
+      break;
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+      XInput.setDpad(v, !XInput.getDpad(v));
+      break;
+  }
+}
+
+void HOLD_BUTTON_CHECK(uint8_t i) {
+  if (DELAY_TIMES[i] != 0 && TIME - DELAY_TIMES[i] == HOLD_TIME) {
+    HOLD_BUTTON_START(FIND_BUTTON_POS(i), i);
+    DELAY_TIMES[i] = 0;
+  }
+}
+
+uint8_t FIND_BUTTON_POS(uint8_t b) {
+  switch (b) {
+    case 1:
+      return BUTTON_A;
+      Serial.println("A");
+      break;
+    case 2:
+      return BUTTON_B;
+      Serial.println("B");
+      break;
+    case 3:
+      return BUTTON_X;
+      Serial.println("X");
+      break;
+    case 4:
+      return BUTTON_Y;
+      Serial.println("Y");
+      break;
+    case 5:
+      return BUTTON_LB;
+      Serial.println("LB");
+      break;
+    case 6:
+      return BUTTON_RB;
+      Serial.println("RB");
+      break;
+    case 7:
+      return TRIGGER_LEFT;
+      Serial.println("LEFT TRIGGER");
+      break;
+    case 8:
+      return TRIGGER_RIGHT;
+      Serial.println("RIGHT TRIGGER");
+      break;
+    case 9:
+      return BUTTON_START;
+      Serial.println("START");
+      break;
+    case 10:
+      return BUTTON_BACK;
+      Serial.println("BACK");
+      break;
+    case 11:
+      return BUTTON_L3;
+      Serial.println("L3");
+      break;
+    case 12:
+      return BUTTON_R3;
+      Serial.println("R3");
+      break;
+    case 13:
+      return DPAD_UP;
+      Serial.println("DPAD UP");
+      break;
+    case 14:
+      return DPAD_DOWN;
+      Serial.println("DPAD DOWN");
+      break;
+    case 15:
+      return DPAD_LEFT;
+      Serial.println("DPAD LEFT");
+      break;
+    case 16:
+      return DPAD_RIGHT;
+      Serial.println("DPAD RIGHT");
+      break;
+  }
 }
 
 void DEBUG_MORSE() {
