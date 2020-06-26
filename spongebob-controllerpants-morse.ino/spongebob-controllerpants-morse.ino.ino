@@ -150,7 +150,7 @@ void loop() {
   }
 
   // Check buttons on release of RESET_BUTTON
-  if (RESET_BUTTON && RESET_BUTTON != RESET_BUTTON_LAST) {
+  if (!RESET_BUTTON && RESET_BUTTON != RESET_BUTTON_LAST) {
     for (uint8_t i = 1; i <= CODE_MAX; i++) {
       XInput.setButton(FIND_BUTTON_POS(i), false);
     }
@@ -197,7 +197,7 @@ uint8_t FIND_BUTTON() {
 }
 
 void HOLD_BUTTON_START(uint8_t v, int p) {
-  if (RESET_BUTTON == !XInput.getButton(v)) {
+  if (RESET_BUTTON) {
     DELAY_TIMES[p] = TIME;
   }
   switch (p) {
