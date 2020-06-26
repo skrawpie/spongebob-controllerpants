@@ -135,11 +135,9 @@ void loop() {
   }
 
   if (digitalRead(SWITCH_PIN) == LOW) {
-    digitalWrite(LED_PIN, LOW);
     XInput.setJoystick(JOY_LEFT, !digitalRead(UP_PIN), !digitalRead(DOWN_PIN), !digitalRead(LEFT_PIN), !digitalRead(RIGHT_PIN));
     XInput.setJoystick(JOY_RIGHT, false, false, false, false);
   } else {
-    digitalWrite(LED_PIN, HIGH);
     XInput.setJoystick(JOY_RIGHT, !digitalRead(UP_PIN), !digitalRead(DOWN_PIN), !digitalRead(LEFT_PIN), !digitalRead(RIGHT_PIN));
     XInput.setJoystick(JOY_LEFT, false, false, false, false);
   }
@@ -153,6 +151,15 @@ void loop() {
   if (!RESET_BUTTON && RESET_BUTTON != RESET_BUTTON_LAST) {
     for (uint8_t i = 1; i <= CODE_MAX; i++) {
       XInput.setButton(FIND_BUTTON_POS(i), false);
+    }
+  }
+
+  // Use LED to show if any buttons are active
+  for (uint8_t i = 1; i <= CODE_MAX; i++) {
+    if (XInput.getButton(FIND_BUTTON_POS(i))) {
+      digitalWrite(LED_PIN, HIGH);
+    } else {
+      digitalWrite(LED_PIN, LOW);
     }
   }
   
